@@ -8,6 +8,7 @@ trials = int(sys.argv[2])
 check_number = int(sys.argv[3])
 pull_stats = []
 
+
 def mk_letter(col):
     if col == 0:
         return 'B'
@@ -19,6 +20,7 @@ def mk_letter(col):
         return 'G'
     elif col == 4:
         return 'O'
+
 
 def get_col(ball):
     if ball[0] == 'B':
@@ -33,10 +35,12 @@ def get_col(ball):
         return 4
     return -1
 
+
 def mk_number(number_list):
     number = c(number_list)
     number_list.remove(number)
     return number
+
 
 def mk_bingo_board():
     lists = [list(range(1, 16)), list(range(16, 31)), list(range(31, 46)), list(range(46, 61)), list(range(61, 76))]
@@ -51,6 +55,7 @@ def mk_bingo_board():
 
     return board
 
+
 def mark_bingo_board(board, ball):
     col = get_col(ball)
     for row in range(5):
@@ -60,10 +65,12 @@ def mark_bingo_board(board, ball):
             return row, col
     return -1, col
 
+
 def pull_ball(balls):
     ball = c(balls)
     balls.remove(ball)
     return ball
+
 
 def check_for_bingo(boards, ball):
     for board in boards:
@@ -72,17 +79,20 @@ def check_for_bingo(boards, ball):
             return True
     return False
 
+
 def check_row(row, board):
     for col in range(5):
         if board[row][col] != 'X':
             return False
     return True
 
+
 def check_col(col, board):
     for row in range(5):
         if board[row][col] != 'X':
             return False
     return True
+
 
 def check_diagonals(board):
     for index in range(5):
@@ -97,21 +107,23 @@ def check_diagonals(board):
             return True
     return False
 
+
 def print_board(board):
     print("")
     for row in range(5):
         print(board[row])
     print("")
 
+
 for n in range(trials):
     bingo_balls = [
         letter + str(number) for (letter, number)
-             in list(itertools.product(['B'], list(range(1, 16))))
-             + list(itertools.product(['I'], list(range(16, 31))))
-             + list(itertools.product(['N'], list(range(31, 46))))
-             + list(itertools.product(['G'], list(range(46, 61))))
-             + list(itertools.product(['O'], list(range(61, 76))))
-     ]
+        in list(itertools.product(['B'], list(range(1, 16))))
+        + list(itertools.product(['I'], list(range(16, 31))))
+        + list(itertools.product(['N'], list(range(31, 46))))
+        + list(itertools.product(['G'], list(range(46, 61))))
+        + list(itertools.product(['O'], list(range(61, 76))))
+    ]
     bingo_boards = [mk_bingo_board() for _ in range(num_boards)]
     new_ball = pull_ball(bingo_balls)
     num_pulls = 1

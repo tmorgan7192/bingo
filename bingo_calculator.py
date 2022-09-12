@@ -6,11 +6,13 @@ ognib = ["O", "G", "N", "I", "B"]
 starting_count = {'B': 0, 'I': 0, 'N': 1 , 'G': 0, 'O': 0}
 stats = {}
 
+
 class Outcome(Enum):
     NO_BINGO = 1
     MULTIPLE_BINGO = 2
     ROW_BINGO = 3
     COLUMN_BINGO = 4
+
 
 def increment_ball_count(ball_count):
     for letter in ognib:
@@ -34,6 +36,7 @@ def check_bingo(ball_count):
         return True, Outcome.COLUMN_BINGO
     return False, Outcome.NO_BINGO
 
+
 def is_multiple_bingo(ball_count):
     num_maxed_out_letters = len(maxed_out_letters(ball_count))
     return (
@@ -45,17 +48,22 @@ def is_multiple_bingo(ball_count):
         )
     )
 
+
 def is_row_bingo(ball_count):
     return letters_with_min_count(ball_count, 1) == bingo
+
 
 def is_col_bingo(ball_count):
     return len(maxed_out_letters(ball_count)) == 1
 
+
 def maxed_out_letters(ball_count):
     return [letter for letter in bingo if letter_on_board_count(ball_count, letter) == 5]
 
+
 def letters_with_min_count(ball_count, min_count):
     return [letter for letter in bingo if letter_on_board_count(ball_count, letter) >= min_count]
+
 
 def count_one_letters(ball_count):
     return list(
@@ -63,8 +71,10 @@ def count_one_letters(ball_count):
         .difference(set(letters_with_min_count(ball_count, 2)).union({'N'}))
     )
 
+
 def letter_on_board_count(ball_count, letter):
     return ball_count[letter] + starting_count[letter]
+
 
 def get_combinations(ball_count, do_log, to_print):
     if do_log:
@@ -130,6 +140,7 @@ def perform_calculation():
     print("\nDistribution: ")
     print_stats(stats)
 
+
 def print_stats(stats_to_print):
     keys = list(stats_to_print.keys())
     keys.sort()
@@ -142,6 +153,7 @@ def print_stats(stats_to_print):
     print("-------------------------")
     print("    " + str(sum(stats_to_print.values())))
 
+
 def print_scoring_logic():
     print("\n\n----------- scoring logic ----------\n\n")
     print("1. Start with the probability of some specific bingo game matching the letter counts occurring")
@@ -149,6 +161,7 @@ def print_scoring_logic():
     print("3. All but the last ball can appear in any order.  Multiply by the number of re-orderings fixing the last ball")
     print("4. Multiply by the number of possible last balls")
     print("5. We double counted re-orderings among same-letter balls.  Divide this out")
+
 
 def print_scoring_examples():
     print("\n\n----------- scoring examples ----------\n\n")
@@ -171,6 +184,7 @@ def print_scoring_examples():
         )
         print("")
         score(ball_count, outcome, True, False)
+
 
 perform_calculation()
 print_scoring_logic()
