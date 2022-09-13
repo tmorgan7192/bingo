@@ -142,8 +142,8 @@ def score(
     num_balls = num_balls_on_board + num_balls_off_board
     probability = 1 / perm(75, num_balls)
     numberings = (
-        prod([perm(max_balls_on_board, balls_on_board[letter]) for letter in bingo]) *
-        prod([perm(max_balls_off_board, balls_off_board[letter]) for letter in bingo])
+        prod([perm(max_balls_on_board - starting_count[letter], balls_on_board[letter]) for letter in bingo]) *
+        prod([perm(max_balls_off_board + starting_count[letter], balls_off_board[letter]) for letter in bingo])
     )
     orderings = factorial(num_balls - 1)
     num_final_balls = num_balls_on_board
@@ -157,9 +157,9 @@ def score(
         to_print += "1 / (75 P " + str(num_balls) + ") (probability of specific game)\n"
         to_print += "   "
         for letter in bingo:
-            to_print += " * (" + str(max_balls_on_board) + " P " + str(balls_on_board[letter]) + ")"
+            to_print += " * (" + str(max_balls_on_board - starting_count[letter]) + " P " + str(balls_on_board[letter]) + ")"
         for letter in bingo:
-            to_print += " * (" + str(max_balls_off_board) + " P " + str(balls_off_board[letter]) + ")"
+            to_print += " * (" + str(max_balls_off_board + starting_count[letter]) + " P " + str(balls_off_board[letter]) + ")"
         to_print += " (number of re-numberings)\n"
         to_print += "    * "
         to_print += "(" + str(num_balls) + " - 1)! (number of re-orderings fixing the last ball drawn)\n"
