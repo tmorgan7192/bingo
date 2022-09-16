@@ -1,305 +1,330 @@
-from enum import Enum
-from math import factorial, perm, prod
-
-bingo = ["B", "I", "N", "G", "O"]
-bigo = ['B', 'I', 'G', 'O']
-ognib = ["O", "G", "N", "I", "B"]
-max_balls_on_board = 5
-max_balls_off_board = 10
-starting_count = {'B': 0, 'I': 0, 'N': 1, 'G': 0, 'O': 0}
-stats = {}
+from copy import deepcopy
+from math import comb, floor
 
 
-class Outcome(Enum):
-    NO_BINGO = 1
-    MULTIPLE_BINGO = 2
-    ROW_BINGO = 3
-    COLUMN_BINGO = 4
+env_vars = {"PRINT_COUNT": 1000}
 
 
-def increment_ball_count(balls_on_board, balls_off_board, outcome_is_bingo, print_balls_off_board):
-    if balls_off_board != {'B': 10, 'I': 10, 'N': 11, 'G': 10, 'O': 10} and outcome_is_bingo:
-        do_increment_ball_count(balls_off_board, max_balls_off_board)
-        outcome = get_outcome(balls_on_board)
-        score(balls_on_board, balls_off_board, outcome, False, True, print_balls_off_board, print_balls_off_board)
-        return False
+def o(f, g):
+    return lambda x: f(g(x))
+
+
+def get_row(n):
+    return floor(n / 5)
+
+
+def get_col(n):
+    return n % 5
+
+
+def identity(n):
+    return n
+
+
+def reflect(n):
+    return get_index(get_row(n), 4 - get_col(n))
+
+
+def rotate(n):
+    def do_rotate(k):
+        return get_index(get_col(k), 4 - get_row(k))
+    if n == 1:
+        return do_rotate
     else:
-        reset_balls_off_board(balls_off_board)
-        do_increment_ball_count(balls_on_board, max_balls_on_board)
-        outcome = get_outcome(balls_on_board)
-        while not is_bingo(outcome):
-            do_increment_ball_count(balls_on_board, max_balls_on_board)
-            outcome = get_outcome(balls_on_board)
-
-        if balls_on_board['B'] == max_balls_on_board:
-            return True
-        score(balls_on_board, balls_off_board, outcome, False, True, True, print_balls_off_board)
-        return False
+        return rotate(n - 1)
 
 
-def is_bingo(outcome):
-    return outcome in [Outcome.COLUMN_BINGO, Outcome.ROW_BINGO]
-
-
-def reset_balls_off_board(balls_off_board):
-    for letter in bingo:
-        balls_off_board[letter] = 0
-
-
-def do_increment_ball_count(ball_count, max_count):
-    for letter in ognib:
-        if adjusted_letter_count(ball_count, letter, 1 if max_count == max_balls_on_board else -1) == max_count:
-            if letter != 'B':
-                ball_count[letter] = 0
-                continue
-            else:
-                return True
+def swap_rows(row_1, row_2):
+    def do_swap_rows(n):
+        col = get_col(n)
+        if get_row(n) == row_1:
+            return get_index(row_2, col)
+        elif get_row(n) == row_2:
+            return get_index(row_1, col)
         else:
-            ball_count[letter] += 1
-            skip_if_not_ascending(ball_count)
-            return False
+            return n
+    return do_swap_rows
 
 
-def skip_if_not_ascending(ball_count):
-    max_letter = first_max_letter(ball_count)
-    if max_letter != 'O' and ball_count[max_letter] != 0:
-        for letter in ['O', 'G', 'I', 'B']:
-            if letter != max_letter:
-                ball_count[letter] = ball_count[max_letter]
-            else:
-                break
+def swap_cols(col_1, col_2):
+    def do_swap_cols(n):
+        row = get_row(n)
+        if get_col(n) == col_1:
+            return get_index(row, col_2)
+        elif get_col(n) == col_2:
+            return get_index(row, col_1)
+        else:
+            return n
+    return do_swap_cols
 
 
-def first_max_letter(ball_count):
-    return [letter for letter in bigo if ball_count[letter] == max([ball_count[key] for key in bigo])][0]
+def get_index(row, col):
+    return row * 5 + col
 
 
-def get_outcome(balls_on_board):
-    if is_multiple_bingo(balls_on_board):
-        return Outcome.MULTIPLE_BINGO
-    elif is_row_bingo(balls_on_board):
-        return Outcome.ROW_BINGO
-    elif is_col_bingo(balls_on_board):
-        return Outcome.COLUMN_BINGO
-    return Outcome.NO_BINGO
+def equals(g, h):
+    return all([g(n) == h(n) for n in range(25)])
 
 
-def is_multiple_bingo(balls_on_board):
-    num_maxed_out_letters = len(maxed_out_letters(balls_on_board))
-    return (
-            num_maxed_out_letters > 1
-            or {"B", "I", "G", "O"}.issubset(letters_with_min_count(balls_on_board, 2))
-            or (
-                    num_maxed_out_letters == 1
-                    and {"B", "I", "G", "O"}.issubset(letters_with_min_count(balls_on_board, 1))
-            )
-    )
+def generate_group(generators):
+    group = []
+    new_group = deepcopy(generators)
+    while len(group) != len(new_group):
+        group = deepcopy(new_group)
+        for generator in generators:
+            for element in group:
+                new_element = o(generator, element)
+                if any([equals(new_element, test_element) for test_element in new_group]):
+                    continue
+                new_group.append(new_element)
+    return new_group
 
 
-def is_row_bingo(balls_on_board):
-    return letters_with_min_count(balls_on_board, 1) == bingo
+square_symmetries = [
+    rotate(1),
+    rotate(2),
+    rotate(3),
+    reflect,
+    o(reflect, rotate(1)),
+    o(reflect, rotate(2)),
+    o(reflect, rotate(3)),
+]
+row_swaps = [swap_rows(n, m) for m in range(1, 5) for n in range(m)]
+col_swaps = [swap_cols(n, m) for m in range(1, 5) for n in range(m)]
+rotate_row_swaps = [o(rotate(1), f) for f in row_swaps]
+rotate_col_swaps = [o(rotate(1), f) for f in col_swaps]
+function_pool = square_symmetries + row_swaps + col_swaps + rotate_row_swaps + rotate_col_swaps
 
 
-def is_col_bingo(balls_on_board):
-    return len(maxed_out_letters(balls_on_board)) == 1
+bingos = [
+    [0, 5, 10, 15, 20],
+    [0, 6, 12, 18, 24]
+]
 
 
-def maxed_out_letters(balls_on_board):
-    return [letter for letter in bingo if adjusted_letter_count(balls_on_board, letter) == max_balls_on_board]
+def get_card(subset):
+    bingo_card = [
+        [1, 16, 31, 46, 61],
+        [2, 17, 32, 47, 62],
+        [3, 18, 'X', 48, 63],
+        [4, 19, 34, 49, 64],
+        [5, 20, 35, 50, 65]
+    ]
+    for n in range(25):
+        is_marked = subset[n]
+        row = get_row(n)
+        col = get_col(n)
+        if is_marked == 1:
+            bingo_card[row][col] = 'X'
+
+    return bingo_card
 
 
-def letters_with_min_count(balls_on_board, min_count):
-    return [letter for letter in bingo if adjusted_letter_count(balls_on_board, letter) >= min_count]
-
-
-def count_one_letters(balls_on_board):
-    return list(
-        set(letters_with_min_count(balls_on_board, 1))
-            .difference(set(letters_with_min_count(balls_on_board, 2)).union({'N'}))
-    )
-
-
-def adjusted_letter_count(ball_count, letter, is_on_board=1):
-    return ball_count[letter] + (starting_count[letter] * is_on_board)
-
-
-def score(
-    balls_on_board,
-    balls_off_board,
-    outcome,
-    do_log=False,
-    add_stats=False,
-    print_score=True,
-    print_balls_off_board=False
-):
-    if outcome in [Outcome.NO_BINGO, Outcome.MULTIPLE_BINGO]:
-        do_print_score(outcome, balls_on_board, balls_off_board, "not scored", print_balls_off_board)
-        if do_log:
-            print("")
-        return
-    num_balls_on_board = sum(balls_on_board.values())
-    num_balls_off_board = sum(balls_off_board.values())
-    num_balls = num_balls_on_board + num_balls_off_board
-    probability = 1 / perm(75, num_balls)
-    numberings = (
-        prod([perm(max_balls_on_board - starting_count[letter], balls_on_board[letter]) for letter in bingo]) *
-        prod([perm(max_balls_off_board + starting_count[letter], balls_off_board[letter]) for letter in bingo])
-    )
-    orderings = factorial(num_balls - 1)
-    num_final_balls = num_balls_on_board
-    if outcome == Outcome.ROW_BINGO:
-        num_final_balls = len(count_one_letters(balls_on_board))
-    if outcome == Outcome.COLUMN_BINGO:
-        num_final_balls = 5 - starting_count[maxed_out_letters(balls_on_board)[0]]
-    to_print = ""
-
-    if do_log:
-        to_print += "1 / (75 P " + str(num_balls) + ") (probability of specific game)\n"
-        to_print += "   "
-        for letter in bingo:
-            to_print += " * (" + str(max_balls_on_board - starting_count[letter]) + " P " + str(balls_on_board[letter]) + ")"
-        for letter in bingo:
-            to_print += " * (" + str(max_balls_off_board + starting_count[letter]) + " P " + str(balls_off_board[letter]) + ")"
-        to_print += " (number of re-numberings)\n"
-        to_print += "    * "
-        to_print += "(" + str(num_balls) + " - 1)! (number of re-orderings fixing the last ball drawn)\n"
-        to_print += "    * "
-        to_print += str(num_final_balls) + " (number of possible last balls)\n"
-        to_print += "    * "
-
-    letter_perms_on_board, to_print = get_letter_perms(balls_on_board, do_log, to_print)
-    if do_log:
-        to_print += "on board)\n    * "
-    letter_perms_off_board, to_print = get_letter_perms(balls_off_board, do_log, to_print)
-    
-    if do_log:
-        to_print += "off board)\n     / ( "
-
-    combinations, to_print = get_combinations(balls_on_board, balls_off_board, do_log, to_print)
-
-    stat = (
-        probability * numberings * orderings * num_final_balls * letter_perms_on_board * letter_perms_off_board
-        / combinations
-    )
-
-    if add_stats:
-        stats[num_balls] = stat if num_balls not in stats.keys() else stats[num_balls] + stat
-
-    if print_score:
-        do_print_score(outcome, balls_on_board, balls_off_board, stat, print_balls_off_board)
-    if do_log:
-        print("\n" + to_print)
-
-    return stat
-
-
-def get_combinations(balls_on_board, balls_off_board, do_log, to_print):
-    if do_log:
-        for letter in bingo:
-            to_print += str(balls_on_board[letter]) + "! * "
-        for letter in bingo:
-            to_print += str(balls_off_board[letter]) + "! * "
-        to_print = to_print[0:len(to_print) - 2] + ") (number of re-orderings of same-lettered balls)\n"
-
-    return (
-        prod([factorial(balls_on_board[letter]) for letter in bingo])
-        * prod([factorial(balls_off_board[letter]) for letter in bingo])
-        , to_print
-    )
-
-
-def get_letter_perms(ball_count, do_log, to_print):
-    counts = {
-        value: sum([1 for key in bigo if ball_count[key] == value])
-        for value in [ball_count[letter] for letter in bigo]
+def count_bingos(card):
+    return {
+        "ROW_BINGO_COUNT": check_rows(card),
+        "COL_BINGO_COUNT": check_cols(card),
+        "DIAGONAL_BINGO_COUNT": check_diagonals(card)
     }
-    total_count = sum(counts.values())
-    if do_log and total_count > 0:
-        to_print += str(total_count) + "! / "
-        if len(counts.values()) > 1:
-            to_print += "( "
-        for count in counts.values():
-            to_print += str(count) + "! * "
-        to_print = to_print[0:len(to_print) - 2]
-        if len(counts.values()) > 1:
-            to_print += ") "
-        to_print += "(number of letter permutations "
-
-    return factorial(total_count) / prod([factorial(count) for count in counts.values()]), to_print
 
 
-def perform_calculation(print_balls_off_board):
-    balls_on_board = {'B': 0, 'I': 0, 'N': 0, 'G': 0, 'O': 1}
-    balls_off_board = {'B': 0, 'I': 0, 'N': 0, 'G': 0, 'O': 0}
-
-    exit_loop = False
-    outcome = get_outcome(balls_on_board)
-    while not is_bingo(outcome):
-        increment_ball_count(balls_on_board, balls_off_board, is_bingo(outcome), print_balls_off_board)
-        outcome = get_outcome(balls_on_board)
-    while not exit_loop:
-        exit_loop = increment_ball_count(balls_on_board, balls_off_board, is_bingo(outcome), print_balls_off_board)
-        outcome = get_outcome(balls_on_board)
-
-    print("\n\nExpected Value: " + str(sum([key * stats[key] for key in stats.keys()])))
-    print("\nDistribution: ")
-    print_stats(stats)
+def card_has_bingo(outcome):
+    return max(outcome.values()) > 0
 
 
-def do_print_score(outcome, balls_on_board, balls_off_board, score_to_print, print_balls_off_board):
-    to_print = str(outcome)[8:len(str(outcome))] + " - Balls on board: " + str(balls_on_board)
-    if print_balls_off_board:
-        to_print += ", Balls off board: " + str(balls_off_board)
-        to_print += ", Score: " + str(score_to_print)
+def is_overshoot(outcome):
+    return max(outcome.values()) > 1
+
+
+def is_valid_ending_position(outcome):
+    return card_has_bingo(outcome) and not is_overshoot(outcome)
+
+
+def check_rows(card):
+    row_bingo_count = 0
+    for row in range(5):
+        for col in range(5):
+            if card[row][col] != 'X':
+                break
+            if col == 4:
+                row_bingo_count += 1
+    return row_bingo_count
+
+
+def check_cols(card):
+    col_bingo_count = 0
+    for col in range(5):
+        for row in range(5):
+            if card[row][col] != 'X':
+                break
+            if row == 4:
+                col_bingo_count += 1
+    return col_bingo_count
+
+
+def check_diagonals(card):
+    diagonal_bingo_count = 0
+    for i in range(5):
+        if card[i][i] != 'X':
+            break
+        if i == 4:
+            diagonal_bingo_count += 1
+    for i in range(5):
+        if card[i][4 - i] != 'X':
+            break
+        if i == 4:
+            diagonal_bingo_count += 1
+    return diagonal_bingo_count
+
+
+def score_card(card, outcome, num_copies):
+    balls_on_board = sum(col.count('X') for col in card) - 1
+    print(f"BINGO! * {num_copies} (Balls on board: {balls_on_board}): {card}")
+    print_card(card)
+    score = 0
+    for balls_off_board in range(52):
+        num_balls = balls_on_board + balls_off_board
+        score += num_balls / comb(75, num_balls - 1)
+    return score * num_copies
+
+
+def apply(f, subset):
+    return {f(s): subset[s] for s in subset.keys()}
+
+
+def swap_row_col_bingos(outcome):
+    return {
+        "ROW_BINGO_COUNT": outcome["COL_BINGO_COUNT"],
+        "COL_BINGO_COUNT": outcome["ROW_BINGO_COUNT"],
+        "DIAGONAL_BINGO_COUNT": outcome["DIAGONAL_BINGO_COUNT"]
+    }
+
+
+def visit_node(subset, visited):
+    bingo_card = get_card(subset)
+    outcome = count_bingos(bingo_card)
+    if is_overshoot(outcome):
+        visited[get_num_from_subset(subset)] = False
+        return 0
+    elif is_valid_ending_position(outcome):
+        num_copies = 1
+        for f in function_pool:
+            new_subset = apply(f, subset)
+            new_outcome = count_bingos(get_card(new_subset))
+            if (
+                new_subset != subset
+                and not visited[get_num_from_subset(new_subset)]
+                and (new_outcome == outcome or new_outcome == swap_row_col_bingos(outcome))
+            ):
+                visited[get_num_from_subset(new_subset)] = True
+                num_copies += 1
+        bingo_card = get_card(subset)
+        return score_card(bingo_card, outcome, num_copies)
+    else:
+        return 0
+
+
+def get_marked_nodes(subset):
+    return [key for key in subset.keys() if subset[key] == 1]
+
+
+def get_subset(marked_nodes):
+    return {key: 1 if key in marked_nodes else 0 for key in range(25)}
+
+
+def get_num_from_subset(subset):
+    return sum([pow(2, key) for key in get_marked_nodes(subset)])
+
+
+def get_neighbor(subset, n):
+    return {key: subset[key] if key != n else 1 for key in subset.keys()}
+
+
+def print_card(card):
+    print("")
+    for row in range(len(card)):
+        print_row(card[row])
+    print("")
+
+
+def print_row(row):
+    to_print = ""
+    for i in range(len(row)):
+        entry = str(row[i])
+        to_print += entry
+        to_print += " " * (3 - len(entry))
+    to_print += "\n"
     print(to_print)
 
 
-def print_stats(stats_to_print):
-    keys = list(stats_to_print.keys())
-    keys.sort()
-    for key in keys:
-        if key < 10:
-            print(str(key) + ":  " + str(stats_to_print[key]))
-        else:
-            print(str(key) + ": " + str(stats_to_print[key]))
+def main():
+    score = 0
+    queue = [get_subset(bingo) for bingo in bingos]
+    visited = {n: False for n in range(pow(2, 25))}
+    print("Initialization complete")
+    for bingo in queue:
+        score += visit_node(bingo, visited)
 
-    print("-------------------------")
-    print("    " + str(sum(stats_to_print.values())))
-
-
-def print_scoring_logic():
-    print("\n\n----------- scoring logic ----------\n\n")
-    print("1. Start with the probability of some specific bingo game matching the letter counts occurring")
-    print("2. Multiply by the number of re-numberings of the balls")
-    print("3. All but the last ball can appear in any order.  Multiply by the number of re-orderings fixing the last "
-          "ball")
-    print("4. Multiply by the number of possible last balls")
-    print("5. The letters B, I, G, and O play equivalent rows in this scenario.  As such, we only score ball counts "
-          "where these letter counts appear in increasing order.  Multiply by the number of re-orderings of these "
-          "counts to account for this")
-    print("6. We double counted re-orderings among same-letter balls.  Divide this out")
-
-
-def print_scoring_examples():
-    print("\n\n----------- scoring examples ----------\n\n")
-    examples = [
-        [{'B': 0, 'I': 0, 'N': 2, 'G': 0, 'O': 2}, {'B': 0, 'I': 0, 'N': 0, 'G': 0, 'O': 0}],
-        [{'B': 2, 'I': 2, 'N': 0, 'G': 2, 'O': 2}, {'B': 2, 'I': 7, 'N': 6, 'G': 5, 'O': 8}],
-        [{'B': 1, 'I': 1, 'N': 0, 'G': 1, 'O': 1}, {'B': 0, 'I': 0, 'N': 0, 'G': 0, 'O': 0}],
-        [{'B': 1, 'I': 1, 'N': 0, 'G': 1, 'O': 2}, {'B': 1, 'I': 0, 'N': 2, 'G': 3, 'O': 4}],
-        [{'B': 1, 'I': 1, 'N': 3, 'G': 1, 'O': 2}, {'B': 6, 'I': 4, 'N': 3, 'G': 9, 'O': 0}],
-        [{'B': 0, 'I': 0, 'N': 4, 'G': 0, 'O': 0}, {'B': 0, 'I': 0, 'N': 0, 'G': 0, 'O': 0}],
-        [{'B': 0, 'I': 0, 'N': 0, 'G': 0, 'O': 5}, {'B': 0, 'I': 0, 'N': 0, 'G': 0, 'O': 0}],
-        [{'B': 1, 'I': 1, 'N': 1, 'G': 1, 'O': 1}, {'B': 0, 'I': 0, 'N': 0, 'G': 0, 'O': 0}],
-        [{'B': 3, 'I': 4, 'N': 3, 'G': 0, 'O': 5}, {'B': 1, 'I': 2, 'N': 3, 'G': 4, 'O': 5}]
-    ]
-
-    for ball_count in examples:
-        print("----------- example ----------\n")
-        outcome = get_outcome(ball_count[0])
-        score(ball_count[0], ball_count[1], outcome, True, False, True, True)
+    exit_loop = False
+    while not exit_loop:
+        node = queue.pop(0)
+        if visited[get_num_from_subset(node)]:
+            continue
+        for n in range(25):
+            if n != 12 and node[n] != 1:
+                neighbor = get_neighbor(node, n)
+                if len(get_marked_nodes(neighbor)) >= 17:
+                    exit_loop = True
+                    break
+                if not visited[get_num_from_subset(neighbor)]:
+                    queue.append(neighbor)
+                    score += visit_node(neighbor, visited)
+    print(f"Expected value: {score}")
 
 
-perform_calculation(False)
-print_scoring_logic()
-print_scoring_examples()
+def test_square_symmetries():
+    assert len(square_symmetries) == 7
+    for f in square_symmetries:
+        n = [f(i) for i in range(25)]
+        assert set(n) == set(range(25))
+    print("Tested square symmetries")
+
+
+def test_row_swaps():
+    assert len(row_swaps) == 10
+    for f in row_swaps:
+        transformed_row = [f(i) for i in range(25)]
+        assert set(transformed_row) == set(range(25))
+    print("Tested row swaps")
+
+
+def test_col_swaps():
+    assert len(col_swaps) == 10
+    for f in col_swaps:
+        transformed_col = [f(i) for i in range(25)]
+        assert set(transformed_col) == set(range(25))
+    print("Tested col swaps")
+
+
+def test_rotate_row_swaps():
+    assert len(rotate_row_swaps) == 10
+    for f in rotate_row_swaps:
+        transformed_row = [f(i) for i in range(25)]
+        assert set(transformed_row) == set(range(25))
+    print("Tested rotate row swaps")
+
+
+def test_rotate_col_swaps():
+    assert len(rotate_col_swaps) == 10
+    for f in rotate_col_swaps:
+        transformed_col = [f(i) for i in range(25)]
+        assert set(transformed_col) == set(range(25))
+    print("Tested rotate col swaps")
+
+
+test_square_symmetries()
+test_row_swaps()
+test_col_swaps()
+test_rotate_row_swaps()
+test_rotate_col_swaps()
+main()
