@@ -230,6 +230,11 @@ def print_scoring_examples():
         score(ball_count, outcome, True, False)
 
 
-perform_calculation()
-print_scoring_logic()
-print_scoring_examples()
+def main():
+    perform_calculation()
+    print_scoring_logic()
+    print_scoring_examples()
+
+
+if __name__ == "__main__":
+    main()

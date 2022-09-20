@@ -115,23 +115,28 @@ def print_board(board):
     print("")
 
 
-for n in range(trials):
-    bingo_balls = [
-        letter + str(number) for (letter, number)
-        in list(itertools.product(['B'], list(range(1, 16))))
-        + list(itertools.product(['I'], list(range(16, 31))))
-        + list(itertools.product(['N'], list(range(31, 46))))
-        + list(itertools.product(['G'], list(range(46, 61))))
-        + list(itertools.product(['O'], list(range(61, 76))))
-    ]
-    bingo_boards = [mk_bingo_board() for _ in range(num_boards)]
-    new_ball = pull_ball(bingo_balls)
-    num_pulls = 1
-
-    while not check_for_bingo(bingo_boards, new_ball):
+def main():
+    for n in range(trials):
+        bingo_balls = [
+            letter + str(number) for (letter, number)
+            in list(itertools.product(['B'], list(range(1, 16))))
+            + list(itertools.product(['I'], list(range(16, 31))))
+            + list(itertools.product(['N'], list(range(31, 46))))
+            + list(itertools.product(['G'], list(range(46, 61))))
+            + list(itertools.product(['O'], list(range(61, 76))))
+        ]
+        bingo_boards = [mk_bingo_board() for _ in range(num_boards)]
         new_ball = pull_ball(bingo_balls)
-        num_pulls += 1
+        num_pulls = 1
 
-    pull_stats.append(num_pulls)
-    if (n + 1) % check_number == 0:
-        print("Trials: " + str(n + 1) + ", Average number of pulls: " + str(statistics.mean(pull_stats)))
+        while not check_for_bingo(bingo_boards, new_ball):
+            new_ball = pull_ball(bingo_balls)
+            num_pulls += 1
+
+        pull_stats.append(num_pulls)
+        if (n + 1) % check_number == 0:
+            print("Trials: " + str(n + 1) + ", Average number of pulls: " + str(statistics.mean(pull_stats)))
+
+
+if __name__ == "__main__":
+    main()

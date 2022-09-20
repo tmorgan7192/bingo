@@ -258,6 +258,7 @@ def print_row(row):
 
 
 def main():
+    run_tests()
     score = 0
     queue = [get_subset(bingo) for bingo in bingos]
     visited = {n: False for n in range(pow(2, 25))}
@@ -280,6 +281,14 @@ def main():
                     queue.append(neighbor)
                     score += visit_node(neighbor, visited)
     print(f"Expected value: {score}")
+
+
+def run_tests():
+    test_square_symmetries()
+    test_row_swaps()
+    test_col_swaps()
+    test_rotate_row_swaps()
+    test_rotate_col_swaps()
 
 
 def test_square_symmetries():
@@ -322,9 +331,5 @@ def test_rotate_col_swaps():
     print("Tested rotate col swaps")
 
 
-test_square_symmetries()
-test_row_swaps()
-test_col_swaps()
-test_rotate_row_swaps()
-test_rotate_col_swaps()
-main()
+if __name__ == "__main__":
+    main()
